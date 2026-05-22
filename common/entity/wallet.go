@@ -18,10 +18,10 @@ type WalletListRespData struct {
 }
 
 type WalletAddressGenerateReq struct {
-	WalletId    string         `json:"walletId" binding:"required"`    // 钱包id
-	Blockchain  BlockchainName `json:"blockchain"  binding:"required"` // 区块链名称, 如：Ethereum, Solana, Binance Smart Chain, Tron
-	Network     NetworkName    `json:"network"  binding:"required"`    // 网络名称, 如：mainnet, testnet, sepolia, nile
-	AddressName string         `json:"addressName" binding:"required"` // 地址名称，如："用户充值"
+	WalletId    string         `json:"walletId" binding:"required" example:"69fabb9450a30bdc3c1a79a9"` // 钱包id
+	Blockchain  BlockchainName `json:"blockchain"  binding:"required"  example:"tron"`                 // 公链名称, 如：ethereum, solana, bnb-smart-chain, tron
+	Network     NetworkName    `json:"network"  binding:"required" example:"mainnet"`                  // 网络名称, 如：mainnet, testnet, sepolia, nile
+	AddressName string         `json:"addressName" binding:"required" example:"deposit-address"`       // 地址名称，如："用户充值"
 }
 
 type WalletAddressGenerateResp struct {
@@ -39,8 +39,8 @@ type WalletAddressGenerateRespData struct {
 
 type WalletAddressListReq struct {
 	PageParamReq
-	WalletId   string         `json:"walletId" form:"walletId" binding:"required"`     // 钱包id
-	Blockchain BlockchainName `json:"blockchain" form:"blockchain" binding:"required"` // 区块链名称, 如：Ethereum, Solana, Binance Smart Chain, Tron
+	WalletId   string         `json:"walletId" binding:"required"  example:"69fabb9450a30bdc3c1a79a9"` // 钱包id
+	Blockchain BlockchainName `json:"blockchain" binding:"required"  example:"tron"`                   // 公链名称, 如：ethereum, solana, bnb-smart-chain, tron
 }
 
 type WalletAddressListResp struct {
@@ -55,9 +55,9 @@ type WalletAddressListRespData struct {
 }
 
 type WalletAddressAssetsReq struct {
-	WalletId   string         `json:"walletId" form:"walletId" binding:"required"` // 钱包id
-	Address    string         `json:"address" form:"address" binding:"required"`   // 地址
-	Blockchain BlockchainName `json:"blockchain" form:"blockchain"`                // 可选，区块链名称, 如：Ethereum, Solana, Binance Smart Chain, Tron
+	WalletId   string         `json:"walletId" binding:"required"  example:"69fabb9450a30bdc3c1a79a9"`         // 钱包id
+	Address    string         `json:"address" binding:"required" example:"TYZGhS8UG5okCZneaJoYZJJhsqeD6ZZZZZ"` // 地址
+	Blockchain BlockchainName `json:"blockchain" example:"tron"`                                               // 可选，公链名称, 如：ethereum, solana, bnb-smart-chain, tron
 }
 
 type WalletAddressAssetsResp struct {
@@ -71,8 +71,8 @@ type WalletAddressAssetsRespData struct {
 }
 
 type PageParamReq struct {
-	Limit   int    `json:"limit" form:"limit"`     // 可选，返回记录数限制，默认: 50
-	StartId string `json:"startId" form:"startId"` // 可选，定义当前列表应从上一个已列出的记录的 ID 开始
+	Limit   int    `json:"limit" example:"50"`                         // 可选，返回记录数限制，默认: 50
+	StartId string `json:"startId" example:"6a0d6d6ad91627d0d1c763cd"` // 可选，定义当前列表应从上一个已列出的记录的 ID 开始
 }
 type PageParamResp struct {
 	Limit   int    `json:"limit"`   // 返回记录数限制
@@ -132,7 +132,7 @@ const (
 
 type AssetItem struct {
 	AssetId         string          `json:"assetId"`            // 资产id
-	Blockchain      BlockchainName  `json:"blockchain"`         // 区块链名称, 如：Ethereum, Solana, Binance Smart Chain, Tron
+	Blockchain      BlockchainName  `json:"blockchain"`         // 公链名称, 如：ethereum, solana, bnb-smart-chain, tron
 	Network         NetworkName     `json:"network"`            // 网络名称, 如：mainnet, testnet, sepolia, nile
 	AssetType       AssetType       `json:"assetType"`          // 资产类型，原生币（coin）或代币（token）
 	Contract        string          `json:"contract,omitempty"` // 代币合约地址，仅对代币（token）有效

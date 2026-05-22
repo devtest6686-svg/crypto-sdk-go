@@ -8,18 +8,20 @@ import (
 )
 
 type clientOptions struct {
-	timeout    time.Duration
-	ignore_log bool
-	header     map[string]string
-	logger     logger.ILogger
+	timeout      time.Duration
+	ignore_log   bool
+	header       map[string]string
+	logger       logger.ILogger
+	traceIdField string
 }
 
 func defaultClientOptions() *clientOptions {
 	return &clientOptions{
-		timeout:    30 * time.Second,
-		ignore_log: false,
-		header:     make(map[string]string),
-		logger:     &logger.DefLogger{},
+		timeout:      30 * time.Second,
+		ignore_log:   false,
+		header:       make(map[string]string),
+		logger:       &logger.DefLogger{},
+		traceIdField: "trace_id",
 	}
 }
 
@@ -28,6 +30,13 @@ type ClientOptions func(*clientOptions)
 func WithTimeout(timeout time.Duration) ClientOptions {
 	return func(o *clientOptions) {
 		o.timeout = timeout
+	}
+}
+
+// 指定trace_id写入到ctx的字段
+func WithTraceIdField(field string) ClientOptions {
+	return func(o *clientOptions) {
+		o.traceIdField = field
 	}
 }
 

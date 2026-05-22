@@ -3,9 +3,9 @@ package entity
 import "github.com/shopspring/decimal"
 
 type TransactionDetailReq struct {
-	WalletId        string         `json:"wallet_id" form:"wallet_id" binding:"required"`               // 钱包id
-	Blockchain      BlockchainName `json:"blockchain" form:"blockchain" binding:"required"`             // 区块链名称，如：Ethereum, Solana, Binance Smart Chain, Tron
-	TransactionHash string         `json:"transaction_hash" form:"transaction_hash" binding:"required"` // 交易哈希
+	WalletId        string         `json:"wallet_id" binding:"required" example:"69fabb9450a30bdc3c1a79a9"`                                                // 钱包id
+	Blockchain      BlockchainName `json:"blockchain" binding:"required" example:"tron"`                                                                   // 公链名称, 如：ethereum, solana, bnb-smart-chain, tron
+	TransactionHash string         `json:"transaction_hash" binding:"required" example:"8d113e3a120134e8fb4eed24e35ea97023f43af7efd8ea435676f7433cf0b21c"` // 交易哈希
 }
 
 type TransactionDetailResp struct {

@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"github.com/lbe-io/crypto-sdk-go/client"
-	"github.com/lbe-io/crypto-sdk-go/common/consts"
 	"github.com/lbe-io/crypto-sdk-go/common/entity"
 )
 
@@ -25,7 +24,7 @@ type handlerEntry struct {
 type CallbackManager struct {
 	callbackUri string
 	client      *client.CryptoClient
-	handlers    map[consts.CallbackEventType]handlerEntry
+	handlers    map[entity.EventType]handlerEntry
 }
 
 // NewCallbackManager 创建回调管理器
@@ -34,12 +33,12 @@ func NewCallbackManager(client *client.CryptoClient, callbackUri string) *Callba
 	return &CallbackManager{
 		callbackUri: callbackUri,
 		client:      client,
-		handlers:    make(map[consts.CallbackEventType]handlerEntry),
+		handlers:    make(map[entity.EventType]handlerEntry),
 	}
 }
 
 // Register 注册类型安全的回调处理器（包级泛型函数）
-func Register[T any](m *CallbackManager, eventType consts.CallbackEventType, handler HandlerFunc[T]) {
+func Register[T any](m *CallbackManager, eventType entity.EventType, handler HandlerFunc[T]) {
 	m.handlers[eventType] = handlerEntry{
 		handler: handler,
 		typeOf:  reflect.TypeOf((*T)(nil)).Elem(),
@@ -48,23 +47,33 @@ func Register[T any](m *CallbackManager, eventType consts.CallbackEventType, han
 
 // HandleRequest 处理HTTP请求
 func (m *CallbackManager) HandleRequest(ctx context.Context, req *http.Request) error {
+
+	m.client.Logger().Infof(ctx, "HandleCallback Header trace_id:%s job_id:%s", req.Header.Get("trace-id"), req.Header.Get("job-id"))
+
+	ctx = context.WithValue(ctx, m.client.TraceIdField(), req.Header.Get("trace-id"))
+
 	body, err := m.client.HandleCallback(req, m.callbackUri)
 	if err != nil {
+		m.client.Logger().Errorf(ctx, "CallbackManager HandleRequest err:%v", err)
 		return fmt.Errorf("回调签名验证失败: %v", err)
 	}
 	var callbackEvent entity.CallbackEvent
 	if err := json.Unmarshal(body, &callbackEvent); err != nil {
+		m.client.Logger().Errorf(ctx, "CallbackManager CallbackEvent err:%v", err)
 		return fmt.Errorf("解析回调事件失败: %v", err)
 	}
-	handlerEntry, exists := m.handlers[callbackEvent.EventType]
+	handlerEntry, exists := m.handlers[callbackEvent.Event]
 	if !exists {
-		return fmt.Errorf("未注册的事件类型: %s", callbackEvent.EventType)
+		m.client.Logger().Errorf(ctx, "CallbackManager Event err:%v", callbackEvent.Event)
+		return fmt.Errorf("未注册的事件类型: %s", callbackEvent.Event)
 	}
 	// 反序列化为注册时指定的类型
 	value := reflect.New(handlerEntry.typeOf).Interface()
-	if err := json.Unmarshal(callbackEvent.Data, value); err != nil {
+	if err := json.Unmarshal(body, value); err != nil {
+		m.client.Logger().Errorf(ctx, "CallbackManager typeOf err:%v", err)
 		return fmt.Errorf("事件数据反序列化失败: %v", err)
 	}
+
 	// 调用处理器
 	result := reflect.ValueOf(handlerEntry.handler).Call([]reflect.Value{
 		reflect.ValueOf(ctx),
@@ -78,29 +87,21 @@ func (m *CallbackManager) HandleRequest(ctx context.Context, req *http.Request) 
 
 // DefaultHandlers 默认处理器
 var DefaultHandlers = struct {
-	TransactionCreated HandlerFunc[entity.TransactionCreatedEvent]
-	TransactionUpdated HandlerFunc[entity.TransactionUpdatedEvent]
-	WalletCreated      HandlerFunc[entity.WalletCreatedEvent]
-	WalletUpdated      HandlerFunc[entity.WalletUpdatedEvent]
-	AddressGenerated   HandlerFunc[entity.AddressGeneratedEvent]
-	TestEvent          HandlerFunc[entity.TestEvent]
+	IncomingConfirmed HandlerFunc[entity.Event]
+	OutgoingConfirmed HandlerFunc[entity.Event]
+	OutgoingFailed    HandlerFunc[entity.Event]
+	KeepaliveEvent    HandlerFunc[entity.KeepaliveEvent]
 }{
-	TransactionCreated: func(ctx context.Context, data entity.TransactionCreatedEvent) error {
-		return fmt.Errorf("交易创建事件处理失败: %v", data)
+	IncomingConfirmed: func(ctx context.Context, data entity.Event) error {
+		return fmt.Errorf("转入成功事件处理失败: %v", data)
 	},
-	TransactionUpdated: func(ctx context.Context, data entity.TransactionUpdatedEvent) error {
-		return fmt.Errorf("交易更新事件处理失败: %v", data)
+	OutgoingConfirmed: func(ctx context.Context, data entity.Event) error {
+		return fmt.Errorf("转出成功事件处理失败: %v", data)
 	},
-	WalletCreated: func(ctx context.Context, data entity.WalletCreatedEvent) error {
-		return fmt.Errorf("钱包创建事件处理失败: %v", data)
+	OutgoingFailed: func(ctx context.Context, data entity.Event) error {
+		return fmt.Errorf("转出失败事件处理失败: %v", data)
 	},
-	WalletUpdated: func(ctx context.Context, data entity.WalletUpdatedEvent) error {
-		return fmt.Errorf("钱包更新事件处理失败: %v", data)
-	},
-	AddressGenerated: func(ctx context.Context, data entity.AddressGeneratedEvent) error {
-		return fmt.Errorf("地址生成事件处理失败: %v", data)
-	},
-	TestEvent: func(ctx context.Context, data entity.TestEvent) error {
-		return fmt.Errorf("测试事件处理失败: %v", data)
+	KeepaliveEvent: func(ctx context.Context, data entity.KeepaliveEvent) error {
+		return fmt.Errorf("keepalive事件处理失败: %v", data)
 	},
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/lbe-io/crypto-sdk-go/callback"
 	"github.com/lbe-io/crypto-sdk-go/client"
-	"github.com/lbe-io/crypto-sdk-go/common/consts"
 	"github.com/lbe-io/crypto-sdk-go/common/entity"
 )
 
@@ -26,17 +25,20 @@ func main() {
 		log.Fatal("初始化SDK失败:", err)
 	}
 
-	// 2. 创建回调管理器
+	// 2. 创建回调处理管理器
 	manager := callback.NewCallbackManager(sdkClient, "")
 
-	// 3. 注册交易创建事件处理器
-	callback.Register(manager, consts.EventTypeTransactionCreated, handleTransactionCreated)
+	// 3. 注册转入成功事件处理器
+	callback.Register(manager, entity.EventIncomingConfirmed, handleIncomingConfirmed)
 
-	// 4. 注册钱包创建事件处理器
-	callback.Register(manager, consts.EventTypeWalletCreated, handleWalletCreated)
+	// 4. 注册转出成功事件处理器
+	callback.Register(manager, entity.EventOutgoingConfirmed, handleOutgoingConfirmed)
 
-	// 5. 注册测试事件处理器
-	callback.Register(manager, consts.EventTypeTest, handleTestEvent)
+	// 5. 注册转出失败事件处理器
+	callback.Register(manager, entity.EventOutgoingFailed, handleOutgoingFailed)
+
+	// 6. 注册keepalive事件处理器
+	callback.Register(manager, entity.EventKeepalive, handleKeepaliveEvent)
 
 	// 6. 创建并启动HTTP服务器
 	httpHandler := callback.NewHTTPHandler(manager)
@@ -54,36 +56,46 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
-// handleTransactionCreated 处理交易创建事件
-func handleTransactionCreated(ctx context.Context, data entity.TransactionCreatedEvent) error {
+// handleIncomingConfirmed 处理转入成功事件
+func handleIncomingConfirmed(ctx context.Context, data entity.Event) error {
 
 	// 在这里添加你的业务逻辑
 	// 例如：保存到数据库、发送通知、更新缓存等
-	fmt.Printf("收到交易创建事件:\n")
-	fmt.Printf("  交易ID: %s\n", data.TransactionID)
-	fmt.Printf("  金额: %s %s\n", data.Amount, data.Currency)
-	fmt.Printf("  状态: %s\n", data.Status)
-
-	// 返回处理结果
-	return nil
-}
-
-// handleWalletCreated 处理钱包创建事件
-func handleWalletCreated(ctx context.Context, data entity.WalletCreatedEvent) error {
-
-	fmt.Printf("收到钱包创建事件:\n")
+	fmt.Printf("收到转入成功事件:\n")
 	fmt.Printf("  钱包ID: %s\n", data.WalletID)
-	fmt.Printf("  钱包名称: %s\n", data.WalletName)
-	fmt.Printf("  币种: %s\n", data.Currency)
+	fmt.Printf("  交易ID: %s\n", data.Item.TransactionHash)
+	fmt.Printf("  状态: %s\n", data.Item.Status)
 
 	// 返回处理结果
 	return nil
 }
 
-// handleTestEvent 处理测试事件
-func handleTestEvent(ctx context.Context, data entity.TestEvent) error {
+// handleOutgoingConfirmed 处理转出成功事件
+func handleOutgoingConfirmed(ctx context.Context, data entity.Event) error {
 
-	fmt.Printf("收到测试事件: %s\n", data.Message)
+	fmt.Printf("收到转出成功事件:\n")
+	fmt.Printf("  钱包ID: %s\n", data.WalletID)
+	fmt.Printf("  交易ID: %s\n", data.Item.TransactionHash)
+
+	// 返回处理结果
+	return nil
+}
+
+// handleOutgoingFailed 处理转出失败事件
+func handleOutgoingFailed(ctx context.Context, data entity.Event) error {
+
+	fmt.Printf("收到转出失败事件:\n")
+	fmt.Printf("  钱包ID: %s\n", data.WalletID)
+	fmt.Printf("  交易ID: %s\n", data.Item.TransactionHash)
+
+	// 返回处理结果
+	return nil
+}
+
+// handleKeepaliveEvent 处理keepalive事件
+func handleKeepaliveEvent(ctx context.Context, data entity.KeepaliveEvent) error {
+
+	fmt.Printf("收到keepalive事件: %s\n", data.Message)
 
 	// 返回处理结果
 	return nil
