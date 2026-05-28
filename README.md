@@ -1,4 +1,4 @@
-# crypto-sdk-go
+﻿# crypto-sdk-go
 
 Go 语言版加密业务 SDK，提供：
 
@@ -37,7 +37,7 @@ Go 语言版加密业务 SDK，提供：
 - 事件类型识别与数据解析
 - 泛型安全处理函数注册与调用
 
-支持两种处理器：
+支持两种适配器：
 
 - `callback.HTTPHandler`（标准库 `net/http`）
 - `callback.GinHandler`（Gin 框架）
@@ -49,7 +49,7 @@ Go 语言版加密业务 SDK，提供：
 - HMAC-SHA256
 - 签名时间窗默认 ±5 分钟
 - CanonicalURL 规范化（去掉 Host，仅保留 RequestURI）
-- 统一 `Authorization` 头格式
+- `Authorization` 头格式统一为 `Crypto-V1 ...`
 
 ---
 
@@ -127,11 +127,11 @@ func main() {
 可选配置项：
 
 - `client.WithTimeout(timeout)`：请求超时（默认 30s）
-- `client.WithHeaderKV(key, value)` / `client.WithHeaders(map)`：预留 Header 扩展配置
-- `client.WithIgnoreLog()`：预留忽略日志选项
+- `client.WithHeaderKV(key, value)` / `client.WithHeaders(map[string]string)`：预留 Header 扩展配置
+- `client.WithIgnoreLog()`：忽略内部请求/响应日志
 - `client.WithLogger(log)`：替换默认日志实现
 
-> 说明：当前版本 `WithHeaderKV/WithHeaders` 的 Header 尚未注入到 HTTP 请求头，若你有该需求可在 `client.doRequest` 中补充。
+> 说明：当前版本 `WithHeaderKV` 和 `WithHeaders` 的 Header 数据已保存在 `clientOptions` 中，但尚未注入到实际请求头中。
 
 ---
 
@@ -175,13 +175,18 @@ func main() {
 }
 ```
 
-当前 API 路径映射：
+当前 SDK 业务接口映射为 POST 请求：
 
 - `TransactionDetail` -> `POST /transaction/detail`
 - `WalletList` -> `POST /wallet/list`
 - `WalletAddressGenerate` -> `POST /wallet/address/generate`
 - `WalletAddressList` -> `POST /wallet/address/list`
 - `WalletAddressAssets` -> `POST /wallet/address/assets`
+
+SDK 也提供通用请求方法：
+
+- `CryptoClient.Get(ctx, path, req, resp)`
+- `CryptoClient.Post(ctx, path, req, resp)`
 
 ### 4.2 接入回调（net/http）
 
@@ -275,21 +280,14 @@ func main() {
 
 可注册事件：
 
-- `transaction_created`
-- `transaction_updated`
-- `wallet_created`
-- `wallet_updated`
-- `address_generated`
-- `test`
+- `INCOMING_CONFIRMED`
+- `OUTGOING_CONFIRMED`
+- `OUTGOING_FAILED`
+- `KEEPALIVE`
 
-对应常量位于 `common/consts/callback_event.go`：
+对应常量位于 `common/consts/callback.go`和 `common/consts/event.go`：
 
-- `consts.EventTypeTransactionCreated`
-- `consts.EventTypeTransactionUpdated`
-- `consts.EventTypeWalletCreated`
-- `consts.EventTypeWalletUpdated`
-- `consts.EventTypeAddressGenerated`
-- `consts.EventTypeTest`
+- `consts.Event`
 
 ---
 
@@ -307,19 +305,23 @@ SDK 在每次请求前自动生成 `Authorization`，签名内容包含：
 - canonical_url
 - sign_body
 
+签名 Header 格式为：
+
+`Crypto-V1 merchant_id:xxx&appid:xxx&nonce:xxx&sign_time:xxx&sign:xxx`
+
 ### 6.2 响应验签
 
 SDK 会读取响应头 `Authorization` 并校验签名。
 
-- 若响应头缺失，直接返回错误
+- 若响应头缺失，返回错误
 - 若验签失败，返回错误
 
 ### 6.3 回调验签
 
-`HandleCallback` 会对回调请求进行验签。
+`callback.CallbackManager` 的 `HandleRequest` 会对回调请求进行验签。
 
-- 默认使用请求的 `RequestURI`
-- 若你在网关做了 URI 重写，建议初始化 `CallbackManager` 时显式传入回调 URI
+- 默认使用回调请求的 `RequestURI`
+- 若网关或代理改写了 URI，请显式调用 `callback.NewCallbackManager(sdkClient, callbackUri)`
 
 ---
 
@@ -341,11 +343,9 @@ go run ./examples/gin_callback
 
 ---
 
-## 8. 错误处理建议
+## 8. 注意事项
 
-- 初始化报错：优先检查 4 个必填配置
-- 验签失败：优先检查 `APISecret`、系统时间偏差、请求路径是否一致
-- 回调失败：检查事件是否已注册，和事件数据结构是否匹配
-
----
-
+- 初始化报错：优先检查 4 个必填配置项是否正确设置。
+- `WithHeaderKV/WithHeaders` 目前未注入到实际 HTTP 请求头，如需附加自定义 Header，需补充 `client.doRequest` 实现。
+- 签名时间窗为 ±5 分钟，请确保客户端与服务端时钟基本一致。
+- 回调验证失败时，优先检查 `APISecret`、回调 URI、请求方法、事件类型注册情况。

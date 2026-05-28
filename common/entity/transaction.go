@@ -9,7 +9,7 @@ type TransactionDetailReq struct {
 }
 
 type TransactionDetailResp struct {
-	RequestId string                    `json:"requestId"`       // 定义请求的 ID，requestId 由crypto服务生成，每个请求的 requestId 都是唯一的
+	RequestId string                    `json:"request_id"`      // 定义请求的 ID，requestId 由crypto服务生成，每个请求的 requestId 都是唯一的
 	Error     *APIError                 `json:"error,omitempty"` // 可选，定义请求失败时的错误信息
 	Data      TransactionDetailRespData `json:"data,omitempty"`  //
 }
@@ -22,7 +22,7 @@ type TransactionDetailRespData struct {
 	Direction      Direction         `json:"direction"`       // 交易方向，如：incoming, outgoing, internal
 	Senders        []Sender          `json:"senders"`         // 发送方信息
 	Recipients     []Recipient       `json:"recipients"`      // 接收方信息
-	TokenTransfers TokenTransfer     `json:"token_transfers"` // 代币发送信息，只对代币交易有效
+	TokenTransfers []TokenTransfer   `json:"token_transfers"` // 代币发送信息，只对代币交易有效；同一笔 tx 可能含多笔代币转账；无代币转账时不返回该字段
 	Fee            TransactionFee    `json:"fee"`             // 交易Gas费用
 }
 
@@ -50,6 +50,7 @@ type Sender struct {
 	Address         string          `json:"address"`           // 发送方地址
 	AddressName     string          `json:"address_name"`      // 地址名称
 	IsWalletAddress bool            `json:"is_wallet_address"` // 是否为钱包地址，true-主钱包派生的地址
+	IsMasterAddress bool            `json:"is_master_address"` // 是否为钱包master地址，true-主钱包master地址（设置为Gas钱包的master地址，归集时可用于支付Gas手续费）
 	Amount          decimal.Decimal `json:"amount"`            // 发送原生币数量
 	Symbol          string          `json:"symbol"`            // 发送原生币符号：TRX, ETH, BNB, SOL.
 }
@@ -58,6 +59,7 @@ type Recipient struct {
 	Address         string          `json:"address"`           // 接收方地址
 	AddressName     string          `json:"address_name"`      // 地址名称
 	IsWalletAddress bool            `json:"is_wallet_address"` // 是否为钱包地址，true-主钱包派生的地址
+	IsMasterAddress bool            `json:"is_master_address"` // 是否为钱包master地址，true-主钱包master地址（设置为Gas钱包的master地址，归集时可用于支付Gas手续费）
 	Amount          decimal.Decimal `json:"amount"`            // 接收原生币数量
 	Symbol          string          `json:"symbol"`            // 接收原生币符号，如：TRX, ETH, BNB, SOL
 }
@@ -67,7 +69,7 @@ type TokenTransfer struct {
 	ToAddress   string          `json:"to_address"`         // 接收方地址
 	Amount      decimal.Decimal `json:"amount"`             // 代币数量
 	Contract    string          `json:"contract,omitempty"` // 代币合约地址
-	Decimals    decimal.Decimal `json:"decimals"`           // 代币精度
+	Decimals    int32           `json:"decimals"`           // 代币精度
 	Symbol      string          `json:"symbol"`             // 代币符号，如：USDT, USDC
 	TokenName   string          `json:"token_name"`         // 代币名称： Tether, USD Coin.
 }

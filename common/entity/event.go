@@ -26,6 +26,7 @@ type Event struct {
 
 // EventItem
 // 当一笔交易的转入转出地址均为主钱包相关地址时，需要发送2次事件：转入地址的incoming事件, 转出地址的outgoing事件
+// 当转入或转出地址，包含手续费地址（主钱包零地址时），不发送该事件
 type EventItem struct {
 	Direction       Direction         `json:"direction"`        // 交易方向，只支持incoming, outgoing
 	Address         string            `json:"address"`          // 产生回调事件的地址
